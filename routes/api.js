@@ -1,6 +1,8 @@
 const express = require('express');
-const app = express();
+const router = express.Router();
 
-app.get('/api', (req, res) => {
-  res.send('This is the About page');
+router.get('/', (req, res) => {
+  res.send('This is the API root');
 });
+
+module.exports = router;
