@@ -1,8 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const authRouter = require("./auth")
 
-router.get('/', (req, res) => {
-  res.send('This is the API root');
-});
-
+router.use("/auth", authRouter)
 module.exports = router;
