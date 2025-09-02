@@ -1,14 +1,25 @@
 var express = require('express');
 var router = express.Router();
+const bcrypt = require('bcrypt')
+const execute = require("../models/database/db");
 
-// Register route
-router.get('/register', (req, res) => {
- res.send('register successfull')
+
+router.post("/register", async (req, res) => {
+  try {
+    const {full_name, email, password} = req.body;
+    const hashPass = await bcrypt.hash(password, 2);
+    await execute(
+      "INSERT INTO user (full_name, email, password) VALUES (?, ?, ?)", 
+      [	full_name, email, hashPass]
+    );
+
+    res.json({ message: "User registered!" });
+  } catch (err) {
+    console.error("Error:", err.message);
+    res.json({ error: "Internal Server Error" });
+  }
 });
 
-// Login route
-router.get('/login', (req, res) => {
-  res.send('login successfull')
-});
+
 
 module.exports = router;
