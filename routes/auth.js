@@ -3,6 +3,8 @@ var router = express.Router();
 const bcrypt = require("bcrypt");
 const execute = require("../models/database/db");
 const { body, validationResult } = require("express-validator");
+const jwt = require("jsonwebtoken");
+const seckey = "mysecretkey";
 
 router.post(
   "/register",
@@ -18,16 +20,18 @@ router.post(
     if (!errors.isEmpty()) {
       console.log(errors);
       return res.json({ errors: errors });
-
     } else {
       try {
         const { full_name, email, password } = req.body;
         const hashPass = await bcrypt.hash(password, 10);
-        await execute("INSERT INTO user (full_name, email, password) VALUES (?, ?, ?)",[full_name, email, hashPass]);
-        return res.json({ message: "User registered!" });
+        await execute(
+          "INSERT INTO user (full_name, email, password) VALUES (?, ?, ?)",
+          [full_name, email, hashPass]
+        );
+        return res.json({ status: true, message: "User registered!" });
       } catch (err) {
         console.error("Error:", err.message);
-        return res.json({ error: "Invalid" });
+        return res.json({ status: false, error: "Invalid" });
       }
     }
   }
@@ -42,7 +46,7 @@ router.post(
   async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return res.json({ errors: errors.array() });
+      return res.json({ errors: errors });
     } else {
       try {
         const { email, password } = req.body;
@@ -51,21 +55,37 @@ router.post(
           email,
         ]);
         if (user.length === 0) {
-          return res.json({ error: "User not found" });
+          return res.json({ status: false, message: "User not found" });
         } else {
           const isMatch = await bcrypt.compare(password, user[0].password);
           if (!isMatch) {
-            return res.json({ error: "Password is incorrect" });
+            return res.json({
+              status: false,
+              message: "Password is incorrect",
+            });
           } else {
-            return res.json({ message: "Login successful" });
+            const token = jwt.sign(
+              { userId: user[0].id, email: user[0].email },
+              seckey,
+              { expiresIn: "1h" }
+            );
+            return res.json({
+              status: true,
+              message: "Login successful",
+              token,
+            });
           }
         }
       } catch (err) {
         console.error("Error:", err.message);
-        res.json({ error: "Invalid" });
+        res.json({ status: false, message: "Invalid" });
       }
     }
   }
 );
+
+
+
+
 
 module.exports = router;
