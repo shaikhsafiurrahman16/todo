@@ -34,5 +34,40 @@ router.post(
     }
   }
 );
+router.post("/read", async (req, res) => {
+  try {
+    const rows = await execute("SELECT * FROM second", []);
+    res.json({ status: true, message: "data fetched", data: rows });
+  } catch (err) {
+    console.error(err);
+    res.json({
+      status: false,
+      message: "data not fetched",
+      error: err.message,
+    });
+  }
+});
+router.delete("/delete", async (req, res) => {
+  const { id } = req.body;
+
+  try {
+    const result = await execute("DELETE FROM second WHERE id = ?", [id]);
+
+    if (result.affectedRows > 0) {
+      res.json({
+        status: true,
+        message: `Id ${id} deleted successfully`,
+      });
+    } else {
+      res.json({
+        status: false,
+        message: `Id ${id} not found`,
+      });
+    }
+  } catch (err) {
+    console.error(err);
+    res.json({status: false,message: "Invalid",error: err.message,});
+  }
+});
 
 module.exports = router;
