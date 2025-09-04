@@ -9,20 +9,27 @@ const seckey = "mysecretkey";
 router.post(
   "/register",
   [
-    body("full_name").notEmpty().withMessage("Name is required"),
-    body("email").isEmail().withMessage("Valid email is required"),
-    body("password")
-      .isLength({ min: 6, max: 12 })
-      .withMessage("Password must be 6-12 characters long"),
+    body("full_name")
+      .notEmpty()
+      .matches(/^[A-Za-z][A-Za-z0-9\s]*$/),
+    body("email")
+      .isEmail()
+      .matches(/^[A-Za-z][A-Za-z0-9._%+-]*@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/),
+    body("password").isLength({ min: 6, max: 12 }),
   ],
   async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      console.log(errors);
-      return res.json({ errors: errors });
+      return res.json({ status: false, message: "Missing params" });
     } else {
       try {
         const { full_name, email, password } = req.body;
+        const existUser = await execute("SELECT * FROM user WHERE email = ?", [
+          email,
+        ]);
+        if (existUser.length > 0) {
+          return res.json({ status: false, message: "User already exist" });
+        }
         const hashPass = await bcrypt.hash(password, 10);
         await execute(
           "INSERT INTO user (full_name, email, password) VALUES (?, ?, ?)",
@@ -83,9 +90,5 @@ router.post(
     }
   }
 );
-
-
-
-
 
 module.exports = router;
