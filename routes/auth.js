@@ -38,7 +38,7 @@ router.post(
         return res.json({ status: true, message: "User registered!" });
       } catch (err) {
         console.error("Error:", err.message);
-        return res.json({ status: false, error: "Invalid" });
+        return res.json({ status: false, message: "Invalid" });
       }
     }
   }
@@ -47,13 +47,15 @@ router.post(
 router.post(
   "/login",
   [
-    body("email").notEmpty().isEmail().withMessage("Valid email is required"),
+    body("email")
+      .isEmail()
+      .matches(/^[A-Za-z][A-Za-z0-9._%+-]*@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/),
     body("password").notEmpty().withMessage("Password required"),
   ],
   async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return res.json({ errors: errors });
+      return res.json({ status: false, message: "Missing params" });
     } else {
       try {
         const { email, password } = req.body;
@@ -68,18 +70,24 @@ router.post(
           if (!isMatch) {
             return res.json({
               status: false,
-              message: "Password is incorrect",
+              message: "Invalid Email or Password",
             });
           } else {
-            const token = jwt.sign(
-              { userId: user[0].id, email: user[0].email },
+            await execute("UPDATE user SET last_login = CURRENT_TIMESTAMP WHERE id = ?", [
+              user[0].id,
+            ]);
+
+            const { password, ...userData } = user[0];
+
+            userData.token = jwt.sign(
+              { userId: user[0].Id, email: user[0].email },
               seckey,
               { expiresIn: "1h" }
             );
             return res.json({
               status: true,
               message: "Login successful",
-              token,
+              data: userData,
             });
           }
         }
