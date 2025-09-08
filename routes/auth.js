@@ -73,17 +73,18 @@ router.post(
               message: "Invalid Email or Password",
             });
           } else {
-            await execute("UPDATE user SET last_login = CURRENT_TIMESTAMP WHERE id = ?", [
-              user[0].id,
-            ]);
+            // await execute("UPDATE user SET last_login = CURRENT_TIMESTAMP WHERE id = ?", [
+            //   user[0].id,
+            // ]);
 
             const { password, ...userData } = user[0];
 
             userData.token = jwt.sign(
               { userId: user[0].Id, email: user[0].email },
               seckey,
-              { expiresIn: "1h" }
+              { expiresIn: "7d" }
             );
+
             return res.json({
               status: true,
               message: "Login successful",
