@@ -30,6 +30,7 @@ router.post(
           "INSERT INTO second (title, description, duedate, color, priorty, user_id) VALUES (?, ?, ?, ?, ?, ?)",
           [title, description, duedate, color, priorty, req.user.userId]
         );
+
         res.json({ status: true, message: "Todo inserted" });
       } catch (err) {
         console.error(err);
@@ -85,5 +86,46 @@ router.delete("/delete", authMiddleware, async (req, res) => {
     });
   }
 });
+router.put(
+  "/update",
+  authMiddleware,
+  [
+    body("title").notEmpty(),
+    body("duedate").notEmpty(),
+    body("color").isIn(["red", "yellow", "green"]),
+    body("priorty").isIn(["first", "second", "third"]),
+  ],
+  async (req, res) => {
+    const { id, title, description, duedate, color, priorty } = req.body;
+    if (!id) {
+      return res.json({ status: false, message: "Todo ID is required" });
+    } else {
+      try {
+        const result = await execute(
+          `UPDATE second 
+       SET title = ?, description = ?, duedate = ?, color = ?, priorty = ?, updatedAt = NOW() 
+       WHERE id = ? AND user_id = ?`,
+          [title, description, duedate, color, priorty, id, req.user.userId]
+        );
+
+        if (result.affectedRows > 0) {
+          res.json({ status: true, message: `Id ${id} updated successfully` });
+        } else {
+          res.json({
+            status: false,
+            message: `Not allowed or Todo not found`,
+          });
+        }
+      } catch (err) {
+        console.error(err);
+        res.json({
+          status: false,
+          message: "Update failed",
+          error: err.message,
+        });
+      }
+    }
+  }
+);
 
 module.exports = router;
