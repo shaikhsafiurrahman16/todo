@@ -10,19 +10,25 @@ router.post(
   [
     body("title").notEmpty().withMessage("Title is required").isString(),
     body("duedate").notEmpty().withMessage("date is required"),
+    body("color")
+      .isIn(["red", "yellow", "green"])
+      .withMessage("Select one of these red,yellow,green"),
+    body("priorty")
+      .isIn(["first", "second", "third"])
+      .withMessage("Select one of these first,second,third"),
   ],
   async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       console.log(errors);
-      return res.json({ errors: errors });
+      return res.json({ status: false, message: "Missing params" });
     } else {
       const { title, description, duedate, color, priorty } = req.body;
       console.log(req.body);
       try {
         await execute(
           "INSERT INTO second (title, description, duedate, color, priorty, user_id) VALUES (?, ?, ?, ?, ?, ?)",
-          [title, description, duedate, color, priorty, req.user.userId] // 👈 user_id added
+          [title, description, duedate, color, priorty, req.user.userId]
         );
         res.json({ status: true, message: "Todo inserted" });
       } catch (err) {
@@ -30,7 +36,6 @@ router.post(
         res.json({
           status: false,
           message: "Insert failed",
-          error: err.message,
         });
       }
     }
