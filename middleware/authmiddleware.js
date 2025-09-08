@@ -27,7 +27,7 @@ function authMiddleware(req, res, next) {
   } catch (err) {
     return res.status(401).json({
       status: false,
-      message: "Token Expired",
+      message: "Invalid Token",
     });
   }
 }

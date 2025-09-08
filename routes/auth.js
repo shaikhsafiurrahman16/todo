@@ -29,13 +29,14 @@ router.post(
         ]);
         if (existUser.length > 0) {
           return res.json({ status: false, message: "User already exist" });
+        } else {
+          const hashPass = await bcrypt.hash(password, 10);
+          await execute(
+            "INSERT INTO user (full_name, email, password) VALUES (?, ?, ?)",
+            [full_name, email, hashPass]
+          );
+          return res.json({ status: true, message: "User registered!" });
         }
-        const hashPass = await bcrypt.hash(password, 10);
-        await execute(
-          "INSERT INTO user (full_name, email, password) VALUES (?, ?, ?)",
-          [full_name, email, hashPass]
-        );
-        return res.json({ status: true, message: "User registered!" });
       } catch (err) {
         console.error("Error:", err.message);
         return res.json({ status: false, message: "Invalid" });
@@ -70,7 +71,7 @@ router.post(
           if (!isMatch) {
             return res.json({
               status: false,
-              message: "Invalid Email or Password",
+              message: "Incorrect Email or Password",
             });
           } else {
             const { password, ...userData } = user[0];
@@ -83,7 +84,6 @@ router.post(
               seckey,
               { expiresIn: "7d" }
             );
-
             return res.json({
               status: true,
               message: "Login successful",
