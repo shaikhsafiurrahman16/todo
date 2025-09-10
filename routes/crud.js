@@ -56,55 +56,59 @@ router.post(
     }
   }
 );
-router.get(
-  "/read",
-  authMiddleware,
-  [
-    body("page").isInt().withMessage("please insert a number"),
-    body("limit").isInt().withMessage("please insert a number"),
-  ],
-  async (req, res) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.json({
-        status: false,
-        message: errors.array().map((err) => err.msg),
-      });
+router.get("/read", authMiddleware, async (req, res) => {
+  try {
+    const page = parseInt(req.body.page) || 1;
+    const limit = parseInt(req.body.limit) || 10;
+    const offset = (page - 1) * limit;
+    const search = req.body.search || null;
+
+    let totalRows, rows;
+
+    if (search) {
+      // Count todos with search
+      totalRows = await execute(
+        "SELECT COUNT(*) AS total FROM second WHERE user_id = ? AND title = ?",
+        [req.user.userId, search]
+      );
+
+      // Fetch todos with search
+      rows = await execute(
+        "SELECT * FROM second WHERE user_id = ? AND title = ? LIMIT ? OFFSET ?",
+        [req.user.userId, search, limit, offset]
+      );
     } else {
-      try {
-        const page = parseInt(req.body.page || 1);
-        const limit = parseInt(req.body.limit || 10);
-        const offset = (page - 1) * limit;
+      // Count all todos
+      totalRows = await execute(
+        "SELECT COUNT(*) AS total FROM second WHERE user_id = ?",
+        [req.user.userId]
+      );
 
-        const totalRows = await execute(
-          "SELECT COUNT(*) AS total FROM second WHERE user_id = ?",
-          [req.user.userId]
-        );
-        const totalTodos = totalRows[0].total;
-
-        const rows = await execute(
-          "SELECT * FROM second WHERE user_id = ? LIMIT ? OFFSET ?",
-          [req.user.userId, limit, offset]
-        );
-
-        res.json({
-          status: true,
-          message: "Data fetched",
-          currentPage: page,
-          totalPages: Math.ceil(totalTodos / limit),
-          totalTodos,
-          data: rows,
-        });
-      } catch (err) {
-        console.error(err);
-        res.json({
-          status: false,
-          message: "Data not fetched",
-        });
-      }
+      // Fetch all todos
+      rows = await execute(
+        "SELECT * FROM second WHERE user_id = ? LIMIT ? OFFSET ?",
+        [req.user.userId, limit, offset]
+      );
     }
+    const totalTodos = totalRows[0].total;
+    res.json({
+      status: true,
+      message: "Data fetched",
+      currentPage: page,
+      totalPages: Math.ceil(totalTodos / limit),
+      totalTodos,
+      data: rows,
+    });
+  } catch (err) {
+    console.error(err);
+    res.json({
+      status: false,
+      message: "Data not fetched",
+      error: err.message,
+    });
   }
-);
+});
+
 router.delete(
   "/delete",
   authMiddleware,
