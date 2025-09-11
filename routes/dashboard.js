@@ -7,7 +7,7 @@ const { body, validationResult } = require("express-validator");
 router.get("/getTodo", authMiddleware, async (req, res) => {
   try {
     const rows = await execute(
-      "SELECT COUNT(*) AS total FROM second WHERE user_id = ?",
+      "SELECT COUNT(*) AS total FROM todos WHERE user_id = ?",
       [req.user.userId]
     );
     res.json({
@@ -26,7 +26,7 @@ router.get("/getTodo", authMiddleware, async (req, res) => {
 router.get("/completedTodo", authMiddleware, async (req, res) => {
   try {
     const rows = await execute(
-      "SELECT COUNT(*) AS total FROM second WHERE user_id = ? AND Is_complete = 1",
+      "SELECT COUNT(*) AS total FROM todos WHERE user_id = ? AND Is_complete = 1",
       [req.user.userId]
     );
 
@@ -38,7 +38,7 @@ router.get("/completedTodo", authMiddleware, async (req, res) => {
   } catch (error) {
     res.json({
       status: false,
-      message: "Invalid",
+      message: "Something went wrong",
     });
   }
 });
@@ -46,19 +46,19 @@ router.get("/completedTodo", authMiddleware, async (req, res) => {
 router.get("/pendingTodo", authMiddleware, async (req, res) => {
   try {
     const rows = await execute(
-      "SELECT COUNT(*) AS total FROM second WHERE user_id = ? AND Is_complete = 0",
+      "SELECT COUNT(*) AS total FROM todos WHERE user_id = ? AND Is_complete = 0",
       [req.user.userId]
     );
 
     res.json({
       status: true,
-      message: "All todos fetched",
+      message: "All pending todos fetched",
       data: rows[0].total,
     });
   } catch (error) {
     res.json({
       status: false,
-      message: "Invalid",
+      message: "Something went wrong",
     });
   }
 });
@@ -86,7 +86,7 @@ router.post(
       const { priorty } = req.body;
 
       const rows = await execute(
-        "SELECT COUNT(*) AS total FROM second WHERE user_id = ? AND priorty = ?",
+        "SELECT COUNT(*) AS total FROM todos WHERE user_id = ? AND priorty = ?",
         [req.user.userId, priorty]
       );
 
@@ -98,7 +98,7 @@ router.post(
     } catch (error) {
       res.json({
         status: false,
-        message: "Invalid",
+        message: "omething went wrong",
       });
     }
   }
@@ -107,13 +107,13 @@ router.post(
 router.post("/UpcomingTodos", authMiddleware, async (req, res) => {
   try {
     const rows = await execute(
-      "SELECT * FROM second WHERE user_id = ? AND duedate > NOW() ORDER BY duedate ASC LIMIT 10",
+      "SELECT * FROM todos WHERE user_id = ? AND duedate > NOW() ORDER BY duedate ASC LIMIT 10",
       [req.user.userId]
     );
     if (rows.length === 0) {
       return res.json({ status: false, message: "No upcoming todos found" });
     } else {
-      res.json({
+      return res.json({
         status: true,
         message: "Upcoming todos fetched",
         data: rows,
@@ -124,4 +124,9 @@ router.post("/UpcomingTodos", authMiddleware, async (req, res) => {
     res.json({ status: false, message: "Something went wrong" });
   }
 });
+
+router.get("/report", authMiddleware, async (req , res)=> {
+  res.json({message: "hellow world"})
+});
+
 module.exports = router;

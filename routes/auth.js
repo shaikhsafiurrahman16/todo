@@ -68,8 +68,8 @@ router.post(
   "/login",
   [
     body("email")
-      // .isEmail()
-      .notEmpty().withMessage("email is required")
+      .notEmpty()
+      .withMessage("email is required")
       .matches(/^[A-Za-z][A-Za-z0-9._%+-]*@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/)
       .withMessage("Invalid Email"),
     body("password").notEmpty().withMessage("Password required"),
@@ -77,9 +77,9 @@ router.post(
   async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      console.log(errors)
+      console.log(errors);
       const errorMsg = errors.array()[0].msg;
-      console.log(errorMsg)
+      console.log(errorMsg);
       return res.json({ status: false, message: errorMsg });
     } else {
       try {

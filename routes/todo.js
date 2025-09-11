@@ -61,7 +61,7 @@ router.post(
       console.log(req.body);
       try {
         const existingTodo = await execute(
-          "SELECT * FROM second WHERE user_id = ? AND duedate = ?",
+          "SELECT * FROM todos WHERE user_id = ? AND duedate = ?",
           [req.user.userId, duedate]
         );
 
@@ -73,7 +73,7 @@ router.post(
         }
 
         await execute(
-          "INSERT INTO second (title, description, duedate, color, priorty, user_id) VALUES (?, ?, ?, ?, ?, ?)",
+          "INSERT INTO todos (title, description, duedate, color, priorty, user_id) VALUES (?, ?, ?, ?, ?, ?)",
           [title, description, duedate, color, priorty, req.user.userId]
         );
 
@@ -120,11 +120,11 @@ router.post(
 
         if (search) {
           totalRows = await execute(
-            "SELECT COUNT(*) AS total FROM second WHERE user_id = ? AND title = ?",
+            "SELECT COUNT(*) AS total FROM todos WHERE user_id = ? AND title = ?",
             [req.user.userId, search]
           );
           rows = await execute(
-            "SELECT * FROM second WHERE user_id = ? AND title = ? LIMIT ? OFFSET ?",
+            "SELECT * FROM todos WHERE user_id = ? AND title = ? LIMIT ? OFFSET ?",
             [req.user.userId, search, limit, offset]
           );
           if (rows.length === 0) {
@@ -143,11 +143,11 @@ router.post(
           }
         } else {
           totalRows = await execute(
-            "SELECT COUNT(*) AS total FROM second WHERE user_id = ?",
+            "SELECT COUNT(*) AS total FROM todos WHERE user_id = ?",
             [req.user.userId]
           );
           rows = await execute(
-            "SELECT * FROM second WHERE user_id = ? LIMIT ? OFFSET ?",
+            "SELECT * FROM todos WHERE user_id = ? LIMIT ? OFFSET ?",
             [req.user.userId, limit, offset]
           );
         }
@@ -195,7 +195,7 @@ router.delete(
 
       try {
         const result = await execute(
-          "UPDATE second SET status = 0 WHERE id = ? AND user_id = ?",
+          "UPDATE todos SET status = 0 WHERE id = ? AND user_id = ?",
           [id, req.user.userId]
         );
 
@@ -234,22 +234,34 @@ router.put(
     body("title")
       .notEmpty()
       .withMessage("Title is required")
-      .bail()
-      .matches(/^[A-Za-z0-9 ]+$/)
-      .withMessage("Title should only contain letters or numbers")
-      .bail()
+      .matches(/^[A-Za-z][A-Za-z0-9]*$/)
+      .withMessage(
+        "Title should only start with letter or contain letters or numbers"
+      )
       .isLength({ min: 3 })
       .withMessage("Title must be contain minimum 3 character"),
     body("duedate")
       .notEmpty()
       .withMessage("date is required")
-      .bail()
-      .isAfter(new Date().toISOString().split("T")[0])
-      .withMessage("Please enter a correct date"),
+      .custom((value) => {
+        const regex = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/;
+        if (!regex.test(value)) {
+          throw new Error("Date and time required (YYYY-MM-DD HH:mm:ss)");
+        }
+        const timestamp = new Date(value).getTime();
+        const now = Date.now();
+        if (isNaN(timestamp)) {
+          throw new Error("Invalid date format");
+        }
+        if (timestamp <= now) {
+          throw new Error("Date must be in the future");
+        } else {
+          return true;
+        }
+      }),
     body("color")
       .isIn(["red", "yellow", "green"])
-      .withMessage("Select one of these red,yellow,green")
-      .bail(),
+      .withMessage("Select one of these red,yellow,green"),
     body("priorty")
       .isIn(["high", "medium", "low"])
       .withMessage("Select one of these high , low , medium"),
@@ -257,35 +269,37 @@ router.put(
   async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
+      const errormsg = errors.array()[0].msg;
       return res.json({
         status: false,
-        message: errors.array().map((err) => err.msg),
+        message: errormsg,
       });
-    }
-    const { id, title, description, duedate, color, priorty } = req.body;
-    try {
-      const result = await execute(
-        `UPDATE second 
+    } else {
+      const { id, title, description, duedate, color, priorty } = req.body;
+      try {
+        const result = await execute(
+          `UPDATE todos 
        SET title = ?, description = ?, duedate = ?, color = ?, priorty = ?, updatedAt = NOW() 
        WHERE id = ? AND user_id = ?`,
-        [title, description, duedate, color, priorty, id, req.user.userId]
-      );
+          [title, description, duedate, color, priorty, id, req.user.userId]
+        );
 
-      if (result.affectedRows > 0) {
-        res.json({ status: true, message: `Id ${id} updated successfully` });
-      } else {
+        if (result.affectedRows > 0) {
+          res.json({ status: true, message: `Id ${id} updated successfully` });
+        } else {
+          res.json({
+            status: false,
+            message: `Not allowed or Todo not found`,
+          });
+        }
+      } catch (err) {
+        console.error(err);
         res.json({
           status: false,
-          message: `Not allowed or Todo not found`,
+          message: "Update failed",
+          error: err.message,
         });
       }
-    } catch (err) {
-      console.error(err);
-      res.json({
-        status: false,
-        message: "Update failed",
-        error: err.message,
-      });
     }
   }
 );

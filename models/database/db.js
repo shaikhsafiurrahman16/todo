@@ -20,7 +20,7 @@ function execute(query, values) {
       }
       resolve(result);
     });
-  });
+  }); 
 }
 
 module.exports = execute;
