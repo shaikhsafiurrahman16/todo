@@ -11,16 +11,32 @@ router.post(
   [
     body("full_name")
       .notEmpty()
-      .matches(/^[A-Za-z][A-Za-z0-9\s]*$/),
+      .withMessage("Full name is required")
+      .isString()
+      .bail()
+      .matches(/^[A-Za-z]{3}[A-Za-z0-9\s]*$/)
+      .withMessage("Full name is invalid"),
     body("email")
       .isEmail()
-      .matches(/^[A-Za-z][A-Za-z0-9._%+-]*@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/),
-    body("password").isLength({ min: 6, max: 12 }),
+      .withMessage("Valid email is required")
+      .bail()
+      .matches(/^[A-Za-z][A-Za-z0-9._%+-]*@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/)
+      .withMessage("Email format is invalid"),
+    body("password")
+      .isLength({ min: 6, max: 12 })
+      .withMessage("Password must be at least 6 characters long")
+      .matches(/[0-9]/)
+      .withMessage("Password must contain at least one number")
+      .matches(/[A-Z]/)
+      .withMessage("Password must contain at least one uppercase letter")
+      .matches(/[!@#$%^&*(),.?":{}|<>]/)
+      .withMessage("Password must contain at least one special character"),
   ],
   async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return res.json({ status: false, message: "Missing params" });
+      const errorMsg = errors.array()[0].msg;
+      return res.json({ status: false, message: errorMsg });
     } else {
       try {
         const { full_name, email, password } = req.body;
@@ -35,11 +51,14 @@ router.post(
             "INSERT INTO user (full_name, email, password) VALUES (?, ?, ?)",
             [full_name, email, hashPass]
           );
-          return res.json({ status: true, message: "User registered!" });
+          return res.json({
+            status: true,
+            message: "User registered Successfully",
+          });
         }
       } catch (err) {
         console.error("Error:", err.message);
-        return res.json({ status: false, message: "Invalid" });
+        return res.json({ status: false, message: "Something went wrong" });
       }
     }
   }
@@ -49,14 +68,19 @@ router.post(
   "/login",
   [
     body("email")
-      .isEmail()
-      .matches(/^[A-Za-z][A-Za-z0-9._%+-]*@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/),
+      // .isEmail()
+      .notEmpty().withMessage("email is required")
+      .matches(/^[A-Za-z][A-Za-z0-9._%+-]*@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/)
+      .withMessage("Invalid Email"),
     body("password").notEmpty().withMessage("Password required"),
   ],
   async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return res.json({ status: false, message: "Missing params" });
+      console.log(errors)
+      const errorMsg = errors.array()[0].msg;
+      console.log(errorMsg)
+      return res.json({ status: false, message: errorMsg });
     } else {
       try {
         const { email, password } = req.body;
@@ -93,7 +117,7 @@ router.post(
         }
       } catch (err) {
         console.error("Error:", err.message);
-        res.json({ status: false, message: "Invalid" });
+        res.json({ status: false, message: "Something went wrong" });
       }
     }
   }
