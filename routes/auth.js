@@ -71,7 +71,7 @@ router.post(
       .notEmpty()
       .withMessage("email is required")
       .matches(/^[A-Za-z][A-Za-z0-9._%+-]*@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/)
-      .withMessage("Invalid Email"),
+      .withMessage("valid Email is required"),
     body("password").notEmpty().withMessage("Password required"),
   ],
   async (req, res) => {
