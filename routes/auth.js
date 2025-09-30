@@ -22,6 +22,7 @@ router.post(
       .bail()
       .matches(/^[A-Za-z][A-Za-z0-9._%+-]*@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/)
       .withMessage("Email format is invalid"),
+    body("role").notEmpty().withMessage("role is required"),
     body("password")
       .isLength({ min: 6, max: 12 })
       .withMessage("Password must be at least 6 characters long")
@@ -39,7 +40,7 @@ router.post(
       return res.json({ status: false, message: errorMsg });
     } else {
       try {
-        const { full_name, email, password } = req.body;
+        const { full_name, email, password, role } = req.body;
         const existUser = await execute("SELECT * FROM user WHERE email = ?", [
           email,
         ]);
@@ -48,8 +49,8 @@ router.post(
         } else {
           const hashPass = await bcrypt.hash(password, 10);
           await execute(
-            "INSERT INTO user (full_name, email, password) VALUES (?, ?, ?)",
-            [full_name, email, hashPass]
+            "INSERT INTO user (role, full_name, email, password) VALUES (?, ?, ?, ?)",
+            [role, full_name, email, hashPass]
           );
           return res.json({
             status: true,
@@ -77,9 +78,7 @@ router.post(
   async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      console.log(errors);
       const errorMsg = errors.array()[0].msg;
-      console.log(errorMsg);
       return res.json({ status: false, message: errorMsg });
     } else {
       try {
@@ -88,6 +87,7 @@ router.post(
         const user = await execute("SELECT * FROM user WHERE email = ?", [
           email,
         ]);
+
         if (user.length === 0) {
           return res.json({ status: false, message: "User not found" });
         } else {
@@ -99,15 +99,25 @@ router.post(
             });
           } else {
             const { password, ...userData } = user[0];
+
+            // last login update
             await execute(
               "UPDATE user SET last_login = CURRENT_TIMESTAMP WHERE Id = ?",
               [user[0].Id]
             );
+
+            // ✅ token generate with role
             userData.token = jwt.sign(
-              { userId: user[0].Id, email: user[0].email },
+              {
+                userId: user[0].Id,
+                email: user[0].email,
+                name: user[0].full_name,
+                role: user[0].role,
+              },
               seckey,
               { expiresIn: "7d" }
             );
+
             return res.json({
               status: true,
               message: "Login successful",
@@ -122,5 +132,6 @@ router.post(
     }
   }
 );
+
 
 module.exports = router;

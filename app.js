@@ -1,3 +1,4 @@
+const cors = require("cors");
 var createError = require('http-errors');
 var express = require('express');
 var path = require('path');
@@ -8,6 +9,17 @@ var logger = require('morgan');
 var apiRouter = require('./routes/api');
 
 var app = express();
+
+
+// sabse pehle CORS lagao
+app.use(
+  cors({
+    origin: "http://localhost:5173", // tumhara frontend origin
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    credentials: true,
+  })
+);
+
 
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
