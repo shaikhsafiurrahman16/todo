@@ -36,12 +36,12 @@ router.post(
 
         if (search) {
           totalRows = await execute(
-            "SELECT COUNT(*) AS total FROM user WHERE full_name = ?",
+            "SELECT COUNT(*) AS total FROM user WHERE status = 1 AND full_name = ?",
             [search]
           );
           rows = await execute(
-            "SELECT * FROM user WHERE full_name = ? LIMIT ? OFFSET ?",
-            [ search, limit, offset]
+            "SELECT * FROM user WHERE status = 1 AND full_name = ? LIMIT ? OFFSET ?",
+            [search, limit, offset]
           );
           if (rows.length === 0) {
             return res.json({
@@ -58,14 +58,11 @@ router.post(
             });
           }
         } else {
-          totalRows = await execute(
-            "SELECT COUNT(*) AS total FROM user",
-            []
-          );
-          rows = await execute(
-            "SELECT * FROM user LIMIT ? OFFSET ?",
-            [ limit, offset]
-          );
+          totalRows = await execute("SELECT COUNT(*) AS total FROM user where status = 1", []);
+          rows = await execute("SELECT * FROM user where status = 1 LIMIT ? OFFSET ?", [
+            limit,
+            offset,
+          ]);
         }
         const totalUsers = totalRows[0].total;
         res.json({
@@ -100,37 +97,40 @@ router.delete(
   async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return res.json({ status: false, message: errors.array()[0].msg });
-    }
+      const errormsg = errors.array()[0].msg;
+      return res.json({
+        status: false,
+        message: errormsg,
+      });
+    } else {
+      const { id } = req.body;
 
-    const { id } = req.body;
+      try {
+        const result = await execute(
+          "UPDATE user SET status = 0 WHERE id = ?",
+          [id]
+        );
 
-    try {
-      const result = await execute(
-        "UPDATE user SET status = 0 WHERE id = ?",
-        [id]
-      );
-
-      if (result.affectedRows > 0) {
-        return res.json({ 
-          status: true, 
-          message: `User ${id} deleted successfully` 
-        });
-      } else {
-        return res.json({ 
-          status: false, 
-          message: "User not foundor already deleted" 
+        if (result.affectedRows > 0) {
+          return res.json({
+            status: true,
+            message: `User ${id} deleted successfully`,
+          });
+        } else {
+          return res.json({
+            status: false,
+            message: "User not foundor already deleted",
+          });
+        }
+      } catch (err) {
+        return res.json({
+          status: false,
+          message: "Something went wrong",
+          error: err.message,
         });
       }
-    } catch (err) {
-      return res.json({ 
-        status: false, 
-        message: "Something went wrong", 
-        error: err.message 
-      });
     }
   }
 );
-
 
 module.exports = router;
