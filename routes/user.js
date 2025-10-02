@@ -4,6 +4,31 @@ const execute = require("../models/database/db");
 const authMiddleware = require("../middleware/authmiddleware");
 const { body, validationResult } = require("express-validator");
 
+
+// user role
+router.get("/info", authMiddleware, async (req, res) => {
+  
+  try {
+    const rows = await execute(
+      "SELECT Id, full_name, email, role FROM user WHERE Id = ?",
+      [req.user.id]  
+    );
+    console.log(req.user)
+    if (rows.length === 0) {
+      return res.json({ status: false, message: "User not found" });
+    }
+    res.json({
+      status: true,
+      user: rows[0],
+    });
+  } catch (err) {
+    console.error(err);
+    res.json({ status: false, message: "Something went wrong" });
+  }
+});
+
+
+// User Read
 router.post(
   "/userRead",
   authMiddleware,
@@ -81,8 +106,9 @@ router.post(
       }
     }
   }
-);
+);                                                                         
 
+// User Delete
 router.delete(
   "/userDelete",
   authMiddleware,
@@ -126,6 +152,69 @@ router.delete(
         return res.json({
           status: false,
           message: "Something went wrong",
+          error: err.message,
+        });
+      }
+    }
+  }
+);
+
+//user Edit
+router.put(
+  "/userUpdate",
+  authMiddleware,
+  [
+    body("id")
+      .notEmpty()
+      .withMessage("Id is required")
+      .bail()
+      .isInt()
+      .withMessage("Id must be contains a number"),
+      body("full_name")
+      .notEmpty()
+      .withMessage("Full name is required")
+      .isString()
+      .bail()
+      .matches(/^[A-Za-z]{3}[A-Za-z0-9\s]*$/)
+      .withMessage("Full name is invalid"),
+    body("email")
+      .isEmail()
+      .withMessage("Valid email is required")
+      .bail()
+      .matches(/^[A-Za-z][A-Za-z0-9._%+-]*@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/)
+      .withMessage("Email format is invalid"),
+  ],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      const errormsg = errors.array()[0].msg;
+      return res.json({
+        status: false,
+        message: errormsg,
+      });
+    } else {
+      const { id, full_name, email, } = req.body;
+      try {
+        const result = await execute(
+          `UPDATE user 
+       SET full_name = ?, email = ?, updatedAt = NOW() 
+       WHERE id = ? `,
+          [full_name, email, id]
+        );
+
+        if (result.affectedRows > 0) {
+          res.json({ status: true, message: `Id ${id} updated successfully` });
+        } else {
+          res.json({
+            status: false,
+            message: `Not allowed or User not found`,
+          });
+        }
+      } catch (err) {
+        console.error(err);
+        res.json({
+          status: false,
+          message: "Update failed",
           error: err.message,
         });
       }

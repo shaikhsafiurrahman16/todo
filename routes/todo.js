@@ -202,7 +202,6 @@ router.post(
     }
   }
 );
-
 router.put(
   "/update",
   authMiddleware,

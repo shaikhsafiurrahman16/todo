@@ -99,17 +99,13 @@ router.post(
             });
           } else {
             const { password, ...userData } = user[0];
-
-            // last login update
             await execute(
               "UPDATE user SET last_login = CURRENT_TIMESTAMP WHERE Id = ?",
               [user[0].Id]
             );
-
-            // ✅ token generate with role
             userData.token = jwt.sign(
               {
-                userId: user[0].Id,
+                id: user[0].Id,
                 email: user[0].email,
                 name: user[0].full_name,
                 role: user[0].role,
@@ -132,6 +128,5 @@ router.post(
     }
   }
 );
-
 
 module.exports = router;
